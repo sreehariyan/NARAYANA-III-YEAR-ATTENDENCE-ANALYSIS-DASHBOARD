@@ -1,0 +1,325 @@
+
+<h2 class="sr-only">Narayana College ECE III B.Tech Attendance Dashboard - 167 students across sections A, B, C</h2>
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+.dash { padding: 1.5rem 0; }
+.title { font-size: 18px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 4px; }
+.subtitle { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 1.5rem; }
+.metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 1.5rem; }
+.metric { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 1rem; }
+.metric-label { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 6px; }
+.metric-value { font-size: 22px; font-weight: 500; color: var(--color-text-primary); }
+.metric-sub { font-size: 11px; color: var(--color-text-tertiary); margin-top: 2px; }
+.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 1.5rem; }
+.chart-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1rem; }
+.chart-title { font-size: 13px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 12px; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; font-size: 11px; color: var(--color-text-secondary); }
+.legend span { display: flex; align-items: center; gap: 4px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.table-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1rem; margin-bottom: 1.5rem; }
+.filter-row { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+.filter-row label { font-size: 12px; color: var(--color-text-secondary); }
+.filter-row select, .filter-row input { font-size: 12px; padding: 4px 8px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); color: var(--color-text-primary); }
+table { width: 100%; font-size: 12px; border-collapse: collapse; table-layout: fixed; }
+th { font-weight: 500; color: var(--color-text-secondary); text-align: left; padding: 6px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+td { padding: 6px 8px; color: var(--color-text-primary); border-bottom: 0.5px solid var(--color-border-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+tr:last-child td { border-bottom: none; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 500; }
+.badge-danger { background: #FCEBEB; color: #A32D2D; }
+.badge-warning { background: #FAEEDA; color: #854F0B; }
+.badge-success { background: #EAF3DE; color: #3B6D11; }
+.badge-blue { background: #E6F1FB; color: #185FA5; }
+.section-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+.tab { padding: 4px 14px; border-radius: 99px; font-size: 12px; cursor: pointer; border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); color: var(--color-text-secondary); }
+.tab.active { background: var(--color-background-info); color: var(--color-text-info); border-color: transparent; }
+</style>
+
+<div class="dash">
+  <p class="title">Narayana College — ECE III B.Tech Attendance</p>
+  <p class="subtitle">2023–24 Academic Year &nbsp;·&nbsp; 167 students &nbsp;·&nbsp; Sections A, B, C</p>
+
+  <div class="metric-grid" id="metrics"></div>
+
+  <div class="charts-grid">
+    <div class="chart-card">
+      <p class="chart-title">Attendance distribution — by section</p>
+      <div class="legend" id="bar-legend"></div>
+      <div style="position:relative;height:220px;"><canvas id="barChart" role="img" aria-label="Bar chart of average attendance by section A B C"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <p class="chart-title">Students by attendance range</p>
+      <div class="legend" id="pie-legend"></div>
+      <div style="position:relative;height:220px;"><canvas id="pieChart" role="img" aria-label="Pie chart showing students by attendance range"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-card" style="margin-bottom:1.5rem;">
+    <p class="chart-title">Individual attendance — all students</p>
+    <div style="position:relative;height:200px;"><canvas id="scatterChart" role="img" aria-label="Scatter chart of individual student attendance percentages"></canvas></div>
+  </div>
+
+  <div class="table-card">
+    <p class="chart-title" style="margin-bottom:10px;">Student details</p>
+    <div class="filter-row">
+      <label>Section:</label>
+      <div class="section-tabs" id="tabs">
+        <div class="tab active" onclick="filterSection('All',this)">All</div>
+        <div class="tab" onclick="filterSection('A',this)">A</div>
+        <div class="tab" onclick="filterSection('B',this)">B</div>
+        <div class="tab" onclick="filterSection('C',this)">C</div>
+      </div>
+      <label>Show:</label>
+      <select id="filterType" onchange="renderTable()">
+        <option value="all">All students</option>
+        <option value="defaulters">Below 75% (Defaulters)</option>
+        <option value="low">75–80%</option>
+        <option value="good">80–90%</option>
+        <option value="excellent">Above 90%</option>
+      </select>
+      <input type="text" id="search" placeholder="Search name..." oninput="renderTable()" style="width:140px;" />
+    </div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:110px;">Hall Ticket</th>
+            <th style="width:230px;">Name</th>
+            <th style="width:60px;">Section</th>
+            <th style="width:90px;">Attendance %</th>
+            <th style="width:80px;">Status</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+    <p style="font-size:11px;color:var(--color-text-tertiary);margin-top:8px;" id="tableCount"></p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const raw = [
+  ["22F11A0491","BOYINA MANOJ","C",74.38],["22F11A04D4","PANABAKA VINAY","C",82.3],
+  ["23F11A0401","ACHALA ASHOK","A",79.64],["23F11A0402","AMAVARAPU ADIKA","A",85.37],
+  ["23F11A0403","ANGERI RAMYA","A",86.85],["23F11A0404","ANUGONDA UMAMAHESWARA REDDY","A",77.37],
+  ["23F11A0405","AREPALLI HARI HARA PRIYA","A",67.58],["23F11A0406","ARUMULLA VARSHITHA","A",81.35],
+  ["23F11A0407","BALASUBRAMANYAM MANOJ","A",69.94],["23F11A0408","BANDI SANTHOSH","A",75.15],
+  ["23F11A0409","BOLLOLA JYOSTHNAVI","A",88.04],["23F11A0410","BOYINA HISHIKA","A",77.3],
+  ["23F11A0411","BUTHATI KAVYA","A",88.34],["23F11A0412","CHAGANAM PRASANNA","A",82.82],
+  ["23F11A0413","CHAINURU HARSHITHA","A",77.61],["23F11A0414","CHAPALA ASWINI","A",89.26],
+  ["23F11A0415","CHINNAM THARUN","A",75.77],["23F11A0416","DASARI DHANUSH","A",65.34],
+  ["23F11A0417","DIVI SUSHMA","A",85.28],["23F11A0418","DUDEKULA RAHAMTHULLA","A",83.44],
+  ["23F11A0419","GAJJALA KEERTHI","A",85.89],["23F11A0420","GATTUPALLI VAISHNAVI","A",80.06],
+  ["23F11A0421","GIDDALURI SUNNY","A",69.94],["23F11A0422","GOURABATINA KUMAR","A",86.2],
+  ["23F11A0424","GUNDUBOINA TEJASWINI","A",83.44],["23F11A0425","GURUVALI PRAHARSHA","A",77.61],
+  ["23F11A0426","JONNALAGADDA VENKATA LAKSHMI SAI LAVANYA","A",80.37],["23F11A0427","K JEEVAN REDDY","A",75.69],
+  ["23F11A0428","KAKI DARSHINI","A",78.15],["23F11A0429","KALAVALAPUDI CHENCHAIAH","A",80.92],
+  ["23F11A0430","KASTHURI VISHNU PRIYA","A",70.03],["23F11A0431","KOLE PARVATHI","A",88.33],
+  ["23F11A0432","KOMARI SAI KOTI","A",70.66],["23F11A0433","KONDAPURAM PRIYANKA PRANAVI","A",75.71],
+  ["23F11A0434","KOTHIPAKA VENKATA SAI SASANK","A",74.76],["23F11A0435","KUMARKALAVA MANASWINI","A",76.66],
+  ["23F11A0436","KUNCHALA BHASKAR","A",78.8],["23F11A0437","KUSUPATI GANESH","A",68.67],
+  ["23F11A0438","MADANA VARALAKSHMI","A",80.38],["23F11A0439","MALLE ASHOK","A",77.92],
+  ["23F11A0440","MANDAPATI KAVYA SRI","A",70.98],["23F11A0441","MARRIPATI RAVITEJA","A",83.91],
+  ["23F11A0442","MEKA AKHILA","A",76.34],["23F11A0444","MOPURU GURULEMON","A",68.45],
+  ["23F11A0445","MULAGANI SHASHANK KUMAR","A",67.51],["23F11A0447","NAVURU HARI RAMA TEJA","A",85.49],
+  ["23F11A0448","NELAKUDURU PAVANI","A",82.65],["23F11A0449","NEMALI AKSHAYA","A",82.65],
+  ["23F11A0450","OPPATHOTI GOPICHAND","A",70.98],["23F11A0451","PALADI YASWANTH","A",54.57],
+  ["23F11A0452","PALLA KAVYA","A",76.97],["23F11A0453","PANABAKA MADHU","A",76.66],
+  ["23F11A0454","PARVATHALA SUHITHA","B",83.17],["23F11A0455","PATAN THANVEER AHAMED","B",78.16],
+  ["23F11A0456","PATNAM ANIL KUMAR","B",76.58],["23F11A0457","P AYYAPPA VENKATA ARJUNA SIVA KUMAR","B",77.22],
+  ["23F11A0458","PONNAGANTI CHAITHANYA TEJA","B",72.15],["23F11A0459","PULIMI DINESH","B",82.91],
+  ["23F11A0460","RAGE VARSHINI","B",80.06],["23F11A0461","RAVULA VIJAY KUMAR","B",78.8],
+  ["23F11A0462","SANAMPUDI YESWITHA","B",76.27],["23F11A0464","SHAIK ASIF","B",90.19],
+  ["23F11A0465","SHAIK BRUHAN BABU","B",78.16],["23F11A0466","SHAIK HAMIDUNNISA","B",77.78],
+  ["23F11A0467","SHAIK IMRAN","B",78.1],["23F11A0468","SHAIK MAHABUNISSA","B",77.78],
+  ["23F11A0469","SHAIK SAMRIN","B",74.92],["23F11A0470","SHAIK SHALU","B",82.22],
+  ["23F11A0471","SHAIK UMAR","B",78.66],["23F11A0472","SINGAVARAPU CHAITHANYA KUMAR REDDY","B",81.79],
+  ["23F11A0473","SYED MAHESUHAN","B",86.58],["23F11A0474","SYED SHARIKH","B",77.32],
+  ["23F11A0475","THALLAM BAVANI","B",81.09],["23F11A0476","THOTA BHOOMIKA","B",87.5],
+  ["23F11A0477","UDATHA JASWANTH TEJA","B",69.87],["23F11A0478","VAJJA SUDHEER","B",71.79],
+  ["23F11A0480","VEDACHALAM GANESH CHARAN","B",83.01],["23F11A0481","YARAGARLA SAHITHI","B",82.05],
+  ["23F11A0482","AMARTHALURU VENKATA SUJITHA","B",81.73],["23F11A0483","AMBATI KOUSHIK","B",72.44],
+  ["23F11A0484","ANNABATHINA SUCHARITHA","B",85.44],["23F11A0485","ARAMBAKAM NIKHITHA","B",83.87],
+  ["23F11A0486","ARIGALA MOHANAMMA","B",86.77],["23F11A0488","BODDU TARUNKUMAR","B",74.52],
+  ["23F11A0489","BONUBOYINA VINAY KUMAR","B",82.58],["23F11A0490","BUDARAPU MAHESH","B",73.23],
+  ["23F11A0491","BYRUPOGU SUDHEER","B",76.13],["23F11A0492","CHAGILETE NIHARIKA","B",84.52],
+  ["23F11A0493","CHAMARTHI SARATH","B",81.61],["23F11A0495","CHINTHALA ASHRUTHA","B",77.74],
+  ["23F11A0496","DEVARAPATI SREENIVASULU","B",74.76],["23F11A0498","DUPPATI ANUSHA","B",90.61],
+  ["23F11A0499","ELABOYINA VENKATA SURYA","B",79.94],["23F11A04A0","GANGAVARAPU DILEEP KUMAR","B",77.67],
+  ["23F11A04A1","GEDDAM JAYARAJ KUMAR","B",68.93],["23F11A04A2","GOBIDESI GAYATHRI","B",85.44],
+  ["23F11A04A3","GOWRABATHINA CHANDRA SEKHAR","B",85.76],["23F11A04A4","GUNDUBOINA PRAVEENA","B",81.88],
+  ["23F11A04A5","GUNTAMADUGU SIVA JASWANTH","B",73.14],["23F11A04A6","GUTHI DIVYA SREE","B",85.44],
+  ["23F11A04A7","KADIYALA YASWANTH","B",77.99],["23F11A04A8","KAKURU SRAVANI","C",79.63],
+  ["23F11A04A9","KALLURU HARIKA","C",84.26],["23F11A04B1","KOLLURU VIDITHA","C",88.24],
+  ["23F11A04B2","KONDAPURAM MOUNIKA PRIYADARSHINI","C",74.53],["23F11A04B3","KOPPOLU SANDEEP","C",74.84],
+  ["23F11A04B4","KRISTAM MAHATHI","C",91.28],["23F11A04B5","KUNADI HEMA MANASA","C",80.63],
+  ["23F11A04B6","KURAKU RAJASEKHAR","C",82.5],["23F11A04B9","MALLI ARAVIND","C",75.94],
+  ["23F11A04C0","MARIYA PUNITHA S","C",70.85],["23F11A04C1","MAYANA PATHAN SALMA KHAN","C",71.16],
+  ["23F11A04C2","MIDATHA GEETHIKA","C",30.72],["23F11A04C3","MOLATHATI VYSHNAVI","C",79.87],
+  ["23F11A04C4","MUDDULURU KALYAN RAJU","C",75.79],["23F11A04C5","MUMMADI SNEHA","C",88.29],
+  ["23F11A04C6","NARE SREEHARI","C",78.8],["23F11A04C8","NELATURU SAI NAVYA","C",69.3],
+  ["23F11A04C9","NIDIGINTI KARTHIK","C",81.65],["23F11A04D0","PADIGI REDDY HARINI","C",79.43],
+  ["23F11A04D1","PALEPU MANASA","C",83.23],["23F11A04D2","PALURU LOKESH","C",82.28],
+  ["23F11A04D3","PANTAGANI DIVYA","C",76.9],["23F11A04D4","PARVATHALA VENKATA GOUTHAM","C",66.14],
+  ["23F11A04D5","PATHRO DAYAKAR","C",78.48],["23F11A04D6","PENETI KESAVULU","C",84.49],
+  ["23F11A04D7","POLURU MOUNIKA","C",72.47],["23F11A04D8","PRUDHVI PALLAVI","C",81.65],
+  ["23F11A04D9","P AJAYKUMR","C",70.98],["23F11A04E0","RAMISETTY VAMSI KRISHNA","C",82.65],
+  ["23F11A04E1","SAKAVARAPU HANEESHA","C",78.86],["23F11A04E2","SARVEPALLI TEJASWINI","C",81.7],
+  ["23F11A04E3","SHAIK AMINA","C",74.13],["23F11A04E4","SHAIK AYUB","C",82.02],
+  ["23F11A04E5","SHAIK FARHANA","C",76.58],["23F11A04E6","SHAIK IMRAN","C",82.59],
+  ["23F11A04E7","SHAIK LATHIF","C",82.91],["23F11A04E9","SHAIK SHALINI","C",73.97],
+  ["23F11A04F0","SHAIK SHASHEER","C",69.52],["23F11A04F1","SHAIK VAHID","C",81.59],
+  ["23F11A04F2","SRIKIREDDY NIKHITHA","C",78.41],["23F11A04F3","SYED SAMEER AHAMED","C",83.49],
+  ["23F11A04F4","THIRUMURU VISHNU VARDHAN REDDY","C",92.06],["23F11A04F5","THUMMALA LEKHANA","C",86.35],
+  ["23F11A04F6","TURAKA RAHUL KRISHNA","C",67.3],["23F11A04F7","UPPU ASHOK KUMAR","C",82.22],
+  ["23F11A04F8","VAKA LAKSHMI","C",88.89],["23F11A04F9","VARIGONDA NIHARIKA","C",92.38],
+  ["23F11A04G1","YELLOJI BALAJI","C",76.83],["23F15A0401","A KAILASH KUMAR","C",55.28],
+  ["24F15A0401","BALLI VENKATESWARLU","A",82.02],["24F15A0402","DEVALLA PRABHU","A",73.5],
+  ["24F15A0403","KURAPATI VYSHNAVI","A",81.07],["24F15A0404","PESALA LAVANYA","A",88.01],
+  ["24F15A0405","SHAIK SOWMYA","A",77.29],["24F15A0406","VELUGU CHANDU","A",82.02],
+  ["24F15A0407","BASIREDDY SANDEEP KUMAR REDDY","B",75.4],["24F15A0408","KATAKAM RAVI KUMAR","B",78.64],
+  ["24F15A0409","MEDA JAYANTH","B",78.96],["24F15A0410","SHAIK IMRAN","B",86.73],
+  ["24F15A0411","SHAIK YUSUF","B",76.7],["24F15A0412","YETURI NANDHINI","B",77.35],
+  ["24F15A0413","CHEMIKALA PAVAN KUMAR REDDY","C",80.95],["24F15A0414","KRISHNAPATNAM MANOJ","C",67.94],
+  ["24F15A0415","NASINA SANJANA","C",78.41],["24F15A0416","SHAIK NOWHID","C",80.32],
+  ["24F15A0417","VAKATI SRIVIDYA","C",92.06]
+];
+
+const students = raw.map(r => ({ ht: r[0], name: r[1], section: r[2], att: r[3] }));
+
+function getStatus(att) {
+  if (att >= 90) return ['Excellent', 'badge-blue'];
+  if (att >= 80) return ['Good', 'badge-success'];
+  if (att >= 75) return ['Average', 'badge-warning'];
+  return ['Defaulter', 'badge-danger'];
+}
+
+function avg(arr) { return arr.reduce((a,b)=>a+b,0)/arr.length; }
+
+const sections = ['A','B','C'];
+const sectionData = sections.map(s => {
+  const ss = students.filter(x=>x.section===s);
+  return { section: s, count: ss.length, avg: avg(ss.map(x=>x.att)) };
+});
+
+const total = students.length;
+const avgAll = avg(students.map(x=>x.att));
+const defaulters = students.filter(x=>x.att<75).length;
+const excellent = students.filter(x=>x.att>=90).length;
+const highest = Math.max(...students.map(x=>x.att));
+const lowest = Math.min(...students.map(x=>x.att));
+
+document.getElementById('metrics').innerHTML = `
+  <div class="metric"><div class="metric-label">Total students</div><div class="metric-value">${total}</div><div class="metric-sub">ECE III B.Tech</div></div>
+  <div class="metric"><div class="metric-label">Average attendance</div><div class="metric-value">${avgAll.toFixed(1)}%</div><div class="metric-sub">All sections</div></div>
+  <div class="metric"><div class="metric-label">Defaulters (&lt;75%)</div><div class="metric-value" style="color:#A32D2D;">${defaulters}</div><div class="metric-sub">${((defaulters/total)*100).toFixed(1)}% of class</div></div>
+  <div class="metric"><div class="metric-label">Above 90%</div><div class="metric-value" style="color:#185FA5;">${excellent}</div><div class="metric-sub">Excellent</div></div>
+  <div class="metric"><div class="metric-label">Highest</div><div class="metric-value">${highest.toFixed(1)}%</div><div class="metric-sub">Best attendance</div></div>
+  <div class="metric"><div class="metric-label">Lowest</div><div class="metric-value" style="color:#A32D2D;">${lowest.toFixed(1)}%</div><div class="metric-sub">Needs attention</div></div>
+`;
+
+const barColors = ['#378ADD','#1D9E75','#D85A30'];
+document.getElementById('bar-legend').innerHTML = sections.map((s,i)=>`<span><span class="legend-dot" style="background:${barColors[i]}"></span>Section ${s} (avg ${sectionData[i].avg.toFixed(1)}%)</span>`).join('');
+
+new Chart(document.getElementById('barChart'), {
+  type: 'bar',
+  data: {
+    labels: sections.map((s,i)=>`Section ${s} (${sectionData[i].count})`),
+    datasets: [{
+      data: sectionData.map(s=>parseFloat(s.avg.toFixed(1))),
+      backgroundColor: barColors,
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { min: 60, max: 100, ticks: { callback: v=>v+'%', font:{size:11} }, grid:{color:'rgba(128,128,128,0.1)'} },
+      x: { ticks: { font:{size:11} }, grid:{display:false} }
+    }
+  }
+});
+
+const ranges = [
+  { label: 'Below 75%', count: students.filter(x=>x.att<75).length, color: '#E24B4A' },
+  { label: '75–80%', count: students.filter(x=>x.att>=75&&x.att<80).length, color: '#EF9F27' },
+  { label: '80–90%', count: students.filter(x=>x.att>=80&&x.att<90).length, color: '#1D9E75' },
+  { label: '90%+', count: students.filter(x=>x.att>=90).length, color: '#378ADD' }
+];
+document.getElementById('pie-legend').innerHTML = ranges.map(r=>`<span><span class="legend-dot" style="background:${r.color}"></span>${r.label} (${r.count})</span>`).join('');
+
+new Chart(document.getElementById('pieChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ranges.map(r=>r.label),
+    datasets: [{ data: ranges.map(r=>r.count), backgroundColor: ranges.map(r=>r.color), borderWidth: 2, borderColor: 'transparent' }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } }
+  }
+});
+
+const scatterColors = { A: '#378ADD', B: '#1D9E75', C: '#D85A30' };
+const datasets = sections.map(s => ({
+  label: `Section ${s}`,
+  data: students.filter(x=>x.section===s).map((x,i)=>({ x: i, y: x.att, name: x.name })),
+  backgroundColor: scatterColors[s]+'aa',
+  pointRadius: 5
+}));
+
+new Chart(document.getElementById('scatterChart'), {
+  type: 'scatter',
+  data: { datasets },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: true, position: 'top', labels: { font:{size:11}, boxWidth:10, padding:12 } },
+      tooltip: { callbacks: { label: ctx => `${ctx.raw.name}: ${ctx.raw.y.toFixed(1)}%` } }
+    },
+    scales: {
+      x: { display: false },
+      y: { min: 25, max: 100, ticks: { callback: v=>v+'%', font:{size:11} }, grid:{color:'rgba(128,128,128,0.1)'} }
+    }
+  }
+});
+
+let currentSection = 'All';
+
+function filterSection(sec, el) {
+  currentSection = sec;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderTable();
+}
+
+function renderTable() {
+  const type = document.getElementById('filterType').value;
+  const search = document.getElementById('search').value.toLowerCase();
+  let filtered = students;
+  if (currentSection !== 'All') filtered = filtered.filter(x=>x.section===currentSection);
+  if (type === 'defaulters') filtered = filtered.filter(x=>x.att<75);
+  else if (type === 'low') filtered = filtered.filter(x=>x.att>=75&&x.att<80);
+  else if (type === 'good') filtered = filtered.filter(x=>x.att>=80&&x.att<90);
+  else if (type === 'excellent') filtered = filtered.filter(x=>x.att>=90);
+  if (search) filtered = filtered.filter(x=>x.name.toLowerCase().includes(search)||x.ht.toLowerCase().includes(search));
+  filtered.sort((a,b)=>a.att-b.att);
+  const [statusText, cls] = ['',''];
+  document.getElementById('tableBody').innerHTML = filtered.map(s=>{
+    const [st,sc] = getStatus(s.att);
+    return `<tr>
+      <td style="font-family:var(--font-mono);font-size:11px;">${s.ht}</td>
+      <td title="${s.name}">${s.name}</td>
+      <td>${s.section}</td>
+      <td style="font-weight:500;">${s.att.toFixed(2)}%</td>
+      <td><span class="badge ${sc}">${st}</span></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('tableCount').textContent = `${filtered.length} student${filtered.length!==1?'s':''} shown`;
+}
+
+renderTable();
+</script>
